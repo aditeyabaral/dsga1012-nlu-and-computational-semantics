@@ -1,6 +1,7 @@
 """
 Code for Problems 2 and 3 of HW 1.
 """
+
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -19,11 +20,14 @@ def cosine_sim(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     :return: An array of shape (m, n), where the entry in row i and
         column j is the cosine similarity between x[i] and y[j]
     """
-    raise NotImplementedError("Problem 3b has not been completed yet!")
+    x_norm = x / np.linalg.norm(x, axis=1, keepdims=True)
+    y_norm = y / np.linalg.norm(y, axis=1, keepdims=True)
+    return np.dot(x_norm, y_norm.T)
 
 
-def get_closest_words(embeddings: Embeddings, vectors: np.ndarray,
-                      k: int = 1) -> List[List[str]]:
+def get_closest_words(
+    embeddings: Embeddings, vectors: np.ndarray, k: int = 1
+) -> List[List[str]]:
     """
     Problem 3c: Implement this function.
 
@@ -37,7 +41,9 @@ def get_closest_words(embeddings: Embeddings, vectors: np.ndarray,
         k words that are closest to vectors[i] in the embedding space,
         not necessarily in order
     """
-    raise NotImplementedError("Problem 3c has not been completed yet!")
+    similarities = cosine_sim(vectors, embeddings.vectors)
+    top_k_indices = np.argsort(-similarities, axis=1)[:, :k]
+    return [[embeddings.words[idx] for idx in row] for row in top_k_indices]
 
 
 # This type alias represents the format that the testing data should be
@@ -59,11 +65,24 @@ def load_analogies(filename: str) -> AnalogiesDataset:
         format of the data is described in the problem set and in the
         docstring for the AnalogiesDataset type alias
     """
-    raise NotImplementedError("Problem 2b has not been completed yet!")
+    with open(filename, "r") as f:
+        blocks = f.read().strip().lower().split(": ")
+
+    analogies_dataset: AnalogiesDataset = dict()
+    for block in blocks:
+        if not block:
+            continue
+        relations = block.strip().split("\n")
+        relation_type = relations[0]
+        analogies = list(map(lambda x: tuple(x.split()), relations[1:]))
+        analogies_dataset[relation_type] = analogies
+
+    return analogies_dataset
 
 
-def run_analogy_test(embeddings: Embeddings, test_data: AnalogiesDataset,
-                     k: int = 1) -> Dict[str, float]:
+def run_analogy_test(
+    embeddings: Embeddings, test_data: AnalogiesDataset, k: int = 1
+) -> Dict[str, float]:
     """
     Problem 3d: Implement this function.
 
@@ -80,4 +99,17 @@ def run_analogy_test(embeddings: Embeddings, test_data: AnalogiesDataset,
         that maps each relation type to the analogy question accuracy
         attained by embeddings on analogies from that relation type
     """
-    raise NotImplementedError("Problem 3d has not been completed yet!")
+    results: Dict[str, float] = dict()
+    for relation_type, analogies in test_data.items():
+        correct = 0
+        total = 0
+        for analogy in analogies:
+            w1, w2, w3, w4 = analogy
+            vectors = embeddings[w1, w2, w3]
+            relation = [vectors[1] - vectors[0] + vectors[2]]
+            closest_words = get_closest_words(embeddings, relation, k)[0]
+            if w4 in closest_words:
+                correct += 1
+            total += 1
+        results[relation_type] = correct / total
+    return results
