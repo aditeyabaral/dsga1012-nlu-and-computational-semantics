@@ -1,0 +1,53 @@
+{
+    "50": {
+        "overall": {
+            "correct": 10746,
+            "total": 19544,
+            "accuracy": 0.5498362668849774
+        },
+        "semantic": {
+            "correct": 5019,
+            "total": 8869,
+            "accuracy": 0.5659037095501184
+        },
+        "syntactic": {
+            "correct": 5727,
+            "total": 10675,
+            "accuracy": 0.5364871194379391
+        }
+    },
+    "100": {
+        "overall": {
+            "correct": 12933,
+            "total": 19544,
+            "accuracy": 0.6617376176831764
+        },
+        "semantic": {
+            "correct": 5894,
+            "total": 8869,
+            "accuracy": 0.664561957379637
+        },
+        "syntactic": {
+            "correct": 7039,
+            "total": 10675,
+            "accuracy": 0.6593911007025761
+        }
+    },
+    "200": {
+        "overall": {
+            "correct": 13425,
+            "total": 19544,
+            "accuracy": 0.6869115841178879
+        },
+        "semantic": {
+            "correct": 6253,
+            "total": 8869,
+            "accuracy": 0.705040027060548
+        },
+        "syntactic": {
+            "correct": 7172,
+            "total": 10675,
+            "accuracy": 0.6718501170960187
+        }
+    }
+}
