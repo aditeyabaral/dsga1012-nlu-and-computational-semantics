@@ -1,0 +1,80 @@
+{
+    "50": {
+        "france : paris :: italy :": [
+            "rome",
+            "italy"
+        ],
+        "france : paris :: japan :": [
+            "tokyo",
+            "shanghai"
+        ],
+        "france : paris :: florida :": [
+            "miami",
+            "denver"
+        ],
+        "big : bigger :: small :": [
+            "larger",
+            "large"
+        ],
+        "big : bigger :: cold :": [
+            "cold",
+            "warmer"
+        ],
+        "big : bigger :: quick :": [
+            "quick",
+            "quicker"
+        ]
+    },
+    "100": {
+        "france : paris :: italy :": [
+            "rome",
+            "milan"
+        ],
+        "france : paris :: japan :": [
+            "tokyo",
+            "japan"
+        ],
+        "france : paris :: florida :": [
+            "florida",
+            "miami"
+        ],
+        "big : bigger :: small :": [
+            "larger",
+            "smaller"
+        ],
+        "big : bigger :: cold :": [
+            "cold",
+            "cooler"
+        ],
+        "big : bigger :: quick :": [
+            "quick",
+            "quicker"
+        ]
+    },
+    "200": {
+        "france : paris :: italy :": [
+            "rome",
+            "italy"
+        ],
+        "france : paris :: japan :": [
+            "tokyo",
+            "japan"
+        ],
+        "france : paris :: florida :": [
+            "florida",
+            "miami"
+        ],
+        "big : bigger :: small :": [
+            "smaller",
+            "larger"
+        ],
+        "big : bigger :: cold :": [
+            "cold",
+            "colder"
+        ],
+        "big : bigger :: quick :": [
+            "quick",
+            "quicker"
+        ]
+    }
+}

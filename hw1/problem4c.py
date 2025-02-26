@@ -37,7 +37,7 @@ def run_analogy_test(
     """
     results = []
     for analogy in analogies:
-        w1, w2, w3, w4 = analogy
+        w1, w2, w3, _ = analogy
         vectors = embeddings[w1, w2, w3]
         relation = [vectors[1] - vectors[0] + vectors[2]]
         closest_words = get_closest_words(embeddings, relation, k)[0]
