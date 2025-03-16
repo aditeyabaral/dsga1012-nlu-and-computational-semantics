@@ -2,3 +2,4 @@ nlu_s25/
 __pycache__/
 .idea/
 .ipynb_checkpoints/
+checkpoints*/
