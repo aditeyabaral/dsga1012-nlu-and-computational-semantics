@@ -4,6 +4,7 @@ module. You will implement the MultipleChoicePipeline class in Problem
 2. In Problem 3, you will test LLMs on TruthfulQA by running this file
 as a script on HPC.
 """
+
 import argparse
 import csv
 import re
@@ -31,9 +32,9 @@ def print_delay(*args, **kwargs):
     should be used whenever you want to print something right before
     starting a tqdm loop.
     """
-    time.sleep(.1)
+    time.sleep(0.1)
     print(*args, **kwargs)
-    time.sleep(.1)
+    time.sleep(0.1)
 
 
 def _sanitize(text: str) -> str:
@@ -41,7 +42,7 @@ def _sanitize(text: str) -> str:
     Replaces all punctuation in a text by '-' for the purpose of
     creating filenames.
     """
-    return re.sub('[^0-9a-zA-Z]+', '-', text)
+    return re.sub("[^0-9a-zA-Z]+", "-", text)
 
 
 """ Code to evaluate a language model on TruthfulQA """
@@ -95,7 +96,8 @@ class MultipleChoicePipeline(Pipeline):
         # Initialize loss function (make it ignore pad tokens). Note the
         # use of the reduction="none" keyword argument.
         self.loss_fn = nn.CrossEntropyLoss(
-            ignore_index=tokenizer.pad_token_id, reduction="none")
+            ignore_index=tokenizer.pad_token_id, reduction="none"
+        )
 
         # Demonstrations for few-shot prompting. When demonstrations are
         # used, this variable always ends with \n\n. When demonstrations
@@ -165,7 +167,11 @@ class MultipleChoicePipeline(Pipeline):
                 text 5 corresponds to answer choice 1 for question 1,
                 etc.
         """
-        raise NotImplementedError("Problem 2c has not been completed yet!")
+        return [
+            f"{self._demos}Q: {q}\nA:{self._system_prompt} {c}"
+            for i, q in enumerate(batch["question"])
+            for c in batch["choices"][i]
+        ]
 
     def preprocess(self, batch: Dict[str, Any]) -> Dict[str, torch.Tensor]:
         """
@@ -183,10 +189,13 @@ class MultipleChoicePipeline(Pipeline):
             These tensors should be stored on the GPU if it is being
             used; otherwise, they should be stored on the CPU
         """
-        raise NotImplementedError("Problem 2d has not been completed yet!")
+        return self.tokenizer(
+            self._get_input_texts(batch),
+            padding=True,
+            return_tensors="pt",
+        ).to(self.device)
 
-    def _forward(self, input_: Dict[str, torch.Tensor]) -> \
-            Dict[str, torch.Tensor]:
+    def _forward(self, input_: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Problem 2d: Implement this function.
 
@@ -198,7 +207,13 @@ class MultipleChoicePipeline(Pipeline):
         :return: The logit scores assigned to each next-token prediction
             as well as the input_ids tensor from input_
         """
-        raise NotImplementedError("Problem 2d has not been completed yet!")
+        with torch.no_grad():
+            logits = self.model(**input_).logits
+
+        return {
+            "input_ids": input_["input_ids"],
+            "logits": logits,
+        }
 
     def postprocess(self, outputs: Dict[str, torch.Tensor]) -> Output:
         """
@@ -219,34 +234,67 @@ class MultipleChoicePipeline(Pipeline):
             responds to question i and column j corresponds to answer
             choice j
         """
-        raise NotImplementedError("Problem 2d has not been completed yet!")
+        logits = outputs["logits"]
+        input_ids = outputs["input_ids"]
+
+        shifted_input_ids = input_ids[..., 1:].contiguous()
+        shifted_logits = logits[..., :-1, :].contiguous()
+
+        loss = (
+            self.loss_fn(
+                shifted_logits.view(-1, shifted_logits.size(-1)),
+                shifted_input_ids.view(-1),
+            )
+            .view(shifted_logits.shape[0], -1)
+            .sum(dim=1)
+            .view(-1, self.num_choices)
+        )
+
+        predictions = loss.argmin(dim=1)
+        return Output(loss.cpu().numpy(), predictions.cpu().numpy())
 
 
-def run_model(pipeline: MultipleChoicePipeline, dataset: Dataset,
-              batch_size: int = 10) -> Output:
+def run_model(
+    pipeline: MultipleChoicePipeline, dataset: Dataset, batch_size: int = 10
+) -> Output:
     """
     Runs a language model on TruthfulQA and returns its predictions and
     losses.
     """
-    results = [pipeline(dataset[i:i + batch_size])
-               for i in tqdm(range(0, len(dataset), batch_size))]
+    results = [
+        pipeline(dataset[i : i + batch_size])
+        for i in tqdm(range(0, len(dataset), batch_size))
+    ]
     return Output(*[np.concatenate(r) for r in zip(*results)])
 
 
-def save_outputs(dataset: Dataset, outputs: Output, filename: str,
-                 batch_size: int = 50):
+def save_outputs(
+    dataset: Dataset, outputs: Output, filename: str, batch_size: int = 50
+):
     """
     Saves the predictions and losses computed by a language model on
     TruthfulQA to a CSV file.
     """
     with open(filename, "w") as o:
         writer = csv.writer(o)
-        writer.writerow(["Question", "Choice 0", "Choice 1", "Choice 2",
-                         "Choice 3", "Label", "Prediction", "Loss 0",
-                         "Loss 1", "Loss 2", "Loss 3"])
+        writer.writerow(
+            [
+                "Question",
+                "Choice 0",
+                "Choice 1",
+                "Choice 2",
+                "Choice 3",
+                "Label",
+                "Prediction",
+                "Loss 0",
+                "Loss 1",
+                "Loss 2",
+                "Loss 3",
+            ]
+        )
 
         for i in tqdm(range(0, len(dataset), batch_size)):
-            batch = dataset[i:i + batch_size]
+            batch = dataset[i : i + batch_size]
 
             q = batch["question"]
             c1, c2, c3, c4 = zip(*batch["choices"])
@@ -258,8 +306,9 @@ def save_outputs(dataset: Dataset, outputs: Output, filename: str,
                 writer.writerow(row)
 
 
-def evaluate_truthfulqa(pipeline: MultipleChoicePipeline, dataset: Dataset,
-                        batch_size: int = 10):
+def evaluate_truthfulqa(
+    pipeline: MultipleChoicePipeline, dataset: Dataset, batch_size: int = 10
+):
     """
     Evaluates a pipeline on TruthfulQA.
     """
@@ -267,16 +316,22 @@ def evaluate_truthfulqa(pipeline: MultipleChoicePipeline, dataset: Dataset,
 
     # Evaluate the pipeline on TruthfulQA
     results = run_model(pipeline, dataset, batch_size=batch_size)
-    accuracy = accuracy_metric.compute(predictions=results.prediction,
-                                       references=dataset["label"])
+    accuracy = accuracy_metric.compute(
+        predictions=results.prediction, references=dataset["label"]
+    )
 
     # Save the results as a csv file
     model_name = _sanitize(pipeline.name)
     no_demos = "_no_demos" if pipeline.demonstrations is None else ""
-    system_prompt = "" if pipeline.system_prompt is None else \
-        "_" + _sanitize(pipeline.system_prompt)
-    fn = f"results/{model_name}{no_demos}{system_prompt}_predictions_acc" \
-         f"={accuracy['accuracy']:.3f}.csv"
+    system_prompt = (
+        ""
+        if pipeline.system_prompt is None
+        else "_" + _sanitize(pipeline.system_prompt)
+    )
+    fn = (
+        f"results/{model_name}{no_demos}{system_prompt}_predictions_acc"
+        f"={accuracy['accuracy']:.3f}.csv"
+    )
     save_outputs(dataset, results, fn)
 
     return accuracy
@@ -286,24 +341,41 @@ if __name__ == "__main__":
     # Define command-line arguments
     parser = argparse.ArgumentParser(
         description="Evaluates a Hugging Face language model on TruthfulQA "
-                    "using a multiple-choice paradigm.")
+        "using a multiple-choice paradigm."
+    )
 
-    parser.add_argument("model", type=str,
-                        help="The Hugging Face name of the model to be "
-                             "evaluated")
-    parser.add_argument("-b", "--batch-size", type=int, default=10,
-                        help="The batch size to use for evaluation")
-    parser.add_argument("-s", "--system-prompt", type=str, default="",
-                        help="An optional system prompt to use with the model")
-    parser.add_argument("-d", "--demos", type=str,
-                        default="demonstrations.txt",
-                        help="A file in the prompt_templates folder "
-                             "containing demonstrations for few-shot "
-                             "prompting")
-    parser.add_argument("--no-demos", action="store_true",
-                        help="Do not use demonstrations")
-    parser.add_argument("--debug", action="store_true",
-                        help="Use a small dataset during debugging")
+    parser.add_argument(
+        "model", type=str, help="The Hugging Face name of the model to be " "evaluated"
+    )
+    parser.add_argument(
+        "-b",
+        "--batch-size",
+        type=int,
+        default=10,
+        help="The batch size to use for evaluation",
+    )
+    parser.add_argument(
+        "-s",
+        "--system-prompt",
+        type=str,
+        default="",
+        help="An optional system prompt to use with the model",
+    )
+    parser.add_argument(
+        "-d",
+        "--demos",
+        type=str,
+        default="demonstrations.txt",
+        help="A file in the prompt_templates folder "
+        "containing demonstrations for few-shot "
+        "prompting",
+    )
+    parser.add_argument(
+        "--no-demos", action="store_true", help="Do not use demonstrations"
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Use a small dataset during debugging"
+    )
 
     args = parser.parse_args()
 
